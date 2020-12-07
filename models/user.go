@@ -23,6 +23,7 @@ type User struct {
 	Name      string    `gorm:"255;not null;unique" json:"name"`
 	Email     string    `gorm:"100;not null;unique" json:"email"`
 	Password  string    `gorm:"100;not null" json:"password"`
+	Posts     []Post    `json:"posts"` // Post will use default foreign key name UserID.
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -84,16 +85,16 @@ func (u *User) SaveUser(db *gorm.DB) (*User, error) {
 	return u, nil
 }
 
-func (u *User) FindAllUsers(db *gorm.DB) (*[]User, error) {
+func (u *User) FindAllUsers(db *gorm.DB) ([]User, error) {
 	users := []User{}
 	err := db.Debug().Model(&User{}).Find(&users).Error
 	if err != nil {
-		return &[]User{}, err
+		return []User{}, err
 	}
-	return &users, nil
+	return users, nil
 }
 
-func (u *User) FindUserById(db *gorm.DB, id uint) (*User, error) {
+func (u *User) FindUserByID(db *gorm.DB, id uint) (*User, error) {
 	err := db.Debug().Model(&User{}).Where("id = ?", id).First(u).Error
 	if err == nil {
 		return u, err
@@ -110,7 +111,7 @@ func (u *User) UpdateUser(db *gorm.DB, id uint) (*User, error) {
 		return &User{}, err
 	}
 
-	db = db.Debug().Model(&User{}).First(&User{}).Updates(
+	db = db.Debug().Model(&User{}).Where("id = ?", id).First(&User{}).Updates(
 		map[string]interface{}{
 			"name":       u.Name,
 			"password":   u.Password,
@@ -122,7 +123,7 @@ func (u *User) UpdateUser(db *gorm.DB, id uint) (*User, error) {
 		return &User{}, err
 	}
 	// Retrieve the updated user.
-	err = db.Debug().Where("id = ?", id).First(u).Error
+	err = db.Debug().Model(&User{}).Where("id = ?", id).First(u).Error
 	if err != nil {
 		return &User{}, err
 	}
